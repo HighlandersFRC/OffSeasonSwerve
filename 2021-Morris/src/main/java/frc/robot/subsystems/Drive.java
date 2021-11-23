@@ -8,6 +8,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.OI;
 import frc.robot.commands.defaults.DriveDefault;
+import frc.robot.tools.math.Vector;
 
 public class Drive extends SubsystemBase {
     private final OI OI = new OI();
@@ -96,10 +97,14 @@ public class Drive extends SubsystemBase {
         double xPower = getAdjustedX(originalX, originalY);
         double yPower = getAdjustedY(originalX, originalY);
 
-        leftFront.moduleDrive( xPower, yPower, turn, navxOffset);
-        rightFront.moduleDrive( xPower, yPower, turn, navxOffset);
-        leftBack.moduleDrive(xPower, yPower, turn, navxOffset);
-        rightBack.moduleDrive(xPower, yPower, turn, navxOffset);
+        Vector controllerVector = new Vector(xPower, yPower);
+
+        leftFront.moduleDrive(controllerVector, turn, navxOffset);
+        rightFront.moduleDrive(controllerVector, turn, navxOffset);
+        leftBack.moduleDrive(controllerVector, turn, navxOffset);
+        rightBack.moduleDrive(controllerVector, turn, navxOffset);
+
+        rightFront.postDriveMotorTics();
     }
 
     private Command DriveDefault() {

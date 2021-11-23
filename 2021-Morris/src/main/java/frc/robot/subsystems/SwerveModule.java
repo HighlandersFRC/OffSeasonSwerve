@@ -9,6 +9,7 @@ import com.ctre.phoenix.sensors.CANCoder;
 import edu.wpi.first.wpilibj.CAN;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.OI;
+import frc.robot.tools.math.Vector;
 
 public class SwerveModule extends SubsystemBase {
 	private final double mZeroOffset;
@@ -19,7 +20,9 @@ public class SwerveModule extends SubsystemBase {
     private double turnVectorX = 0;
     private double turnVectorY = 0;
 
-    private double turnPower = 0.5;
+    private double turnPower = 0.75;
+
+    private Vector turnVector = new Vector(0, 0);
 
     private final CANCoder absoluteEncoder;
 
@@ -50,18 +53,26 @@ public class SwerveModule extends SubsystemBase {
 
         // this block creates the turn vector based on the module's relation to the robot(stays constant because robot is square)
         if(moduleNumber == 1) {
+            turnVector.setI(turnPower * -Math.sqrt(2)/2.0);
+            turnVector.setJ(turnPower * -Math.sqrt(2)/2.0);
             turnVectorX = turnPower * -Math.sqrt(2)/2.0;
             turnVectorY = turnPower * -Math.sqrt(2)/2.0;
         }
         if(moduleNumber == 2) {
+            turnVector.setI(turnPower * Math.sqrt(2)/2.0);
+            turnVector.setJ(turnPower * -Math.sqrt(2)/2.0);
             turnVectorX = turnPower * (Math.sqrt(2))/2.0;
             turnVectorY = turnPower * -Math.sqrt(2)/2.0;
         }
         if(moduleNumber == 3) {
+            turnVector.setI(turnPower * Math.sqrt(2)/2.0);
+            turnVector.setJ(turnPower * Math.sqrt(2)/2.0);
             turnVectorX = turnPower * Math.sqrt(2)/2.0;
             turnVectorY = turnPower * Math.sqrt(2)/2.0;
         }
         if(moduleNumber == 4) {
+            turnVector.setI(turnPower * -Math.sqrt(2)/2.0);
+            turnVector.setJ(turnPower * Math.sqrt(2)/2.0);
             turnVectorX = turnPower * -Math.sqrt(2)/2.0;
             turnVectorY = turnPower * Math.sqrt(2)/2.0;
         }
@@ -74,9 +85,13 @@ public class SwerveModule extends SubsystemBase {
     }
 
     // this method sets the angle motor to move to a specific angle(in radians) and then sets the drive motors to the motor percent
-    public void setAnglePID(double targetAngle, double motorPercent){
+    public void setAnglePID(double targetAngle, double velocity){
         angleMotor.set(ControlMode.Position, (radiansToTics((targetAngle))));
-        setDriveMotors(motorPercent);
+        setDriveMotorVelocity(velocity);
+    }
+
+    public void setDriveMotorVelocity(double velocity) {
+        driveMotor.set(ControlMode.Velocity, velocity);
     }
 
     // convert from radians to ticks
@@ -108,11 +123,17 @@ public class SwerveModule extends SubsystemBase {
         driveMotor.set(ControlMode.PercentOutput, percent);
     }
 
+    public void postDriveMotorTics() {
+        System.out.println("Tics: " + driveMotor.getSelectedSensorPosition());
+    }
+
     // method run when robot boots up, sets up Current Limits, as well as tells internal encoder where it actually is
     public void init() {
         angleMotor.setSelectedSensorPosition(radiansToTics(degreesToRadians(absoluteEncoder.getAbsolutePosition())));
         angleMotor.configSupplyCurrentLimit(new SupplyCurrentLimitConfiguration(true, 35, 0 ,0));
+        
         driveMotor.configSupplyCurrentLimit(new SupplyCurrentLimitConfiguration(true, 35, 0 , 0));
+        driveMotor.setSelectedSensorPosition(0);
     }
 
     // returns angle motor position in ticks
@@ -131,27 +152,30 @@ public class SwerveModule extends SubsystemBase {
     }
 
     // method to determine the angle of each wheel and the percent to set each module to
-    public void vectorCalculations(double targetX, double targetY, double turnPercent, double navxOffset) {
+    public void vectorCalculations(Vector controllerVector, double turnPercent, double navxOffset) {
+        // Vector controllerVector = new Vector(targetX, targetY);
+
         // finds the target angle based on controller XY and then factors in navx offset
-        double targetAngle = Math.atan2(targetY, targetX);
+        double targetAngle = Math.atan2(controllerVector.getJ(), controllerVector.getI());
         targetAngle = targetAngle + degreesToRadians(90) + degreesToRadians(navxOffset);
 
         // converts target angle from (r, theta) to <x, y>
-        double hypotenuse = Math.sqrt(Math.pow(targetX, 2) + Math.pow(targetY, 2));
+        double hypotenuse = Math.sqrt(Math.pow(controllerVector.getI(), 2) + Math.pow(controllerVector.getJ(), 2));
         double navxAdjustedX = hypotenuse * Math.cos(targetAngle);
         double navxAdjustedY = hypotenuse * Math.sin(targetAngle);
 
         // factoring in turn percent to turn vector constants so that it doesn't turn too much
-        double turnX = turnPercent * turnVectorX;
-        double turnY = turnPercent * turnVectorY;
+        double turnX = turnPercent * turnVector.getI();
+        double turnY = turnPercent * turnVector.getJ();
 
-        // add two vectors together
-        double adjustedVectorX = turnX + navxAdjustedX;
-        double adjustedVectorY = turnY + navxAdjustedY;
+        // add the turn vector plus the strafe vector together
+        Vector adjustedVector = new Vector(turnX + navxAdjustedX, turnY + navxAdjustedY);
 
         // compute adjusted angle and power based on adjusted vector
-        double motorPercent = Math.sqrt(Math.pow(adjustedVectorX, 2) + Math.pow(adjustedVectorY, 2));
-        double adjustedAngle = Math.atan2(adjustedVectorY, adjustedVectorX);
+        double motorPercent = Math.sqrt(Math.pow(adjustedVector.getI(), 2) + Math.pow(adjustedVector.getJ(), 2));
+        double adjustedAngle = Math.atan2(adjustedVector.getJ(), adjustedVector.getI());
+
+        double intendedVelocity = (motorPercent * 60 * 211900)/(600);
 
         // find initial angle of module to use optimizer
         double initAngle = getModulePosition();
@@ -180,16 +204,16 @@ public class SwerveModule extends SubsystemBase {
         // based on which distance is smallest, setAnglePID with +- motor percent and angle
         if(motorPercent > 0.1){
             if((distanceOne < distanceTwo) && (distanceOne < distanceThree) && (distanceOne < distanceFour)){
-                setAnglePID((caseOneAngle - boundedInitAngle + initAngle), motorPercent);
+                setAnglePID((caseOneAngle - boundedInitAngle + initAngle), intendedVelocity);
             }
             if((distanceTwo < distanceOne) && (distanceTwo < distanceThree) && (distanceTwo < distanceFour)){
-                setAnglePID((caseTwoAngle - boundedInitAngle + initAngle), motorPercent);
+                setAnglePID((caseTwoAngle - boundedInitAngle + initAngle), intendedVelocity);
             }
             if((distanceThree < distanceOne) && (distanceThree < distanceTwo) && (distanceThree < distanceFour)){
-                setAnglePID((caseThreeAngle - boundedInitAngle + initAngle),  -motorPercent);
+                setAnglePID((caseThreeAngle - boundedInitAngle + initAngle),  -intendedVelocity);
             }
             if((distanceFour < distanceOne) && (distanceFour < distanceTwo) && (distanceFour < distanceThree)){
-                setAnglePID((caseFourAngle - boundedInitAngle + initAngle),  -motorPercent);
+                setAnglePID((caseFourAngle - boundedInitAngle + initAngle),  -intendedVelocity);
             }
         } 
         else{
@@ -197,8 +221,8 @@ public class SwerveModule extends SubsystemBase {
         }
     }
 
-    public void moduleDrive(double x, double y, double turn, double offset) {
-        vectorCalculations(x, y,turn, offset);
+    public void moduleDrive(Vector controllerVector, double turn, double offset) {
+        vectorCalculations(controllerVector, turn, offset);
     }
 
 }
