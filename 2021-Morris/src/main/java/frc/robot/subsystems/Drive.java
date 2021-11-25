@@ -3,6 +3,11 @@ package frc.robot.subsystems;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 import com.ctre.phoenix.sensors.CANCoder;
 
+import edu.wpi.first.wpilibj.geometry.Pose2d;
+import edu.wpi.first.wpilibj.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.geometry.Translation2d;
+import edu.wpi.first.wpilibj.kinematics.SwerveDriveKinematics;
+import edu.wpi.first.wpilibj.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -40,12 +45,31 @@ public class Drive extends SubsystemBase {
     private final SwerveModule rightFront = new SwerveModule(1, rightForwardAngleMotor, rightForwardMotor, 0, frontRightAbsoluteEncoder);
     private final SwerveModule rightBack = new SwerveModule(4, rightBackAngleMotor, rightBackMotor, 0, backRightAbsoluteEncoder);
 
+    // Locations for the swerve drive modules relative to the robot center.
+    Translation2d m_frontLeftLocation = new Translation2d(0.2921, 0.2921);
+    Translation2d m_frontRightLocation = new Translation2d(0.2921, -0.2921);
+    Translation2d m_backLeftLocation = new Translation2d(-0.2921, 0.2921);
+    Translation2d m_backRightLocation = new Translation2d(-0.2921, -0.2921);
+
+    // Creating my kinematics object using the module locations
+    SwerveDriveKinematics m_kinematics = new SwerveDriveKinematics(
+    m_frontLeftLocation, m_frontRightLocation, m_backLeftLocation, m_backRightLocation
+    );
+
+    // Creating my odometry object from the kinematics object. Here,
+    // our starting pose is 5 meters along the long end of the field and in the
+    // center of the field along the short end, facing forward.
+    SwerveDriveOdometry m_odometry; 
+    Pose2d m_pose;
+
     double initAngle;
     double setAngle;
     double diffAngle;
 
     public Drive(Peripherals peripherals) {
         this.peripherals = peripherals;
+
+        m_odometry = new SwerveDriveOdometry(m_kinematics, new Rotation2d(Math.toRadians(peripherals.getNavxAngle())));
     }
 
     // get each external encoder
@@ -99,12 +123,32 @@ public class Drive extends SubsystemBase {
 
         Vector controllerVector = new Vector(xPower, yPower);
 
+        m_pose = m_odometry.update(new Rotation2d(Math.toRadians(-navxOffset)), leftFront.getState(), rightFront.getState(), leftBack.getState(), rightBack.getState());
+
         leftFront.moduleDrive(controllerVector, turn, navxOffset);
         rightFront.moduleDrive(controllerVector, turn, navxOffset);
         leftBack.moduleDrive(controllerVector, turn, navxOffset);
         rightBack.moduleDrive(controllerVector, turn, navxOffset);
 
         rightFront.postDriveMotorTics();
+
+        System.out.println(m_odometry.getPoseMeters());
+    }
+
+    public void autoDrive(double angle, double turnDegPerSec, double driveSpeed) {
+        double navxOffset = peripherals.getNavxAngle();
+
+        double turn = turnDegPerSec/360;
+        double motorPercent = driveSpeed/4.96824;
+
+        double radiansAngle = Math.toRadians(angle);
+        Vector inputVector = new Vector(Math.cos(radiansAngle), Math.sin(radiansAngle));
+        inputVector.scalarMultiple(motorPercent);
+
+        leftFront.moduleDrive(inputVector, turn, navxOffset);
+        rightFront.moduleDrive(inputVector, turn, navxOffset);
+        leftBack.moduleDrive(inputVector, turn, navxOffset);
+        rightBack.moduleDrive(inputVector, turn, navxOffset);
     }
 
     private Command DriveDefault() {

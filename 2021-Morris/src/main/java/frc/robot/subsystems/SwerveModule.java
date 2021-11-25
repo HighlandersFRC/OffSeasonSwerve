@@ -7,6 +7,8 @@ import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.sensors.CANCoder;
 
 import edu.wpi.first.wpilibj.CAN;
+import edu.wpi.first.wpilibj.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.OI;
 import frc.robot.tools.math.Vector;
@@ -20,7 +22,7 @@ public class SwerveModule extends SubsystemBase {
     private double turnVectorX = 0;
     private double turnVectorY = 0;
 
-    private double turnPower = 0.75;
+    private double turnPower = 0.5;
 
     private Vector turnVector = new Vector(0, 0);
 
@@ -124,7 +126,11 @@ public class SwerveModule extends SubsystemBase {
     }
 
     public void postDriveMotorTics() {
-        System.out.println("Tics: " + driveMotor.getSelectedSensorPosition());
+        // System.out.println("Tics: " + driveMotor.getSelectedSensorPosition());
+    }
+
+    public SwerveModuleState getState() {
+        return new SwerveModuleState((driveMotor.getSelectedSensorVelocity() * 4.96824/20235), new Rotation2d(getModulePosition()%(2*Math.PI)));
     }
 
     // method run when robot boots up, sets up Current Limits, as well as tells internal encoder where it actually is
@@ -175,7 +181,7 @@ public class SwerveModule extends SubsystemBase {
         double motorPercent = Math.sqrt(Math.pow(adjustedVector.getI(), 2) + Math.pow(adjustedVector.getJ(), 2));
         double adjustedAngle = Math.atan2(adjustedVector.getJ(), adjustedVector.getI());
 
-        double intendedVelocity = (motorPercent * 60 * 211900)/(600);
+        double intendedVelocity = (motorPercent * 20235);
 
         // find initial angle of module to use optimizer
         double initAngle = getModulePosition();
@@ -223,6 +229,10 @@ public class SwerveModule extends SubsystemBase {
 
     public void moduleDrive(Vector controllerVector, double turn, double offset) {
         vectorCalculations(controllerVector, turn, offset);
+        // System.out.println((driveMotor.getSelectedSensorVelocity() * 0.3192018 * 600/13230));
+        // System.out.println(driveMotor.getSelectedSensorVelocity() * 0.3191858/20235);
     }
+
+
 
 }

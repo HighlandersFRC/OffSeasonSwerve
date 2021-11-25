@@ -5,6 +5,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.robot.commands.DriveForward;
 import frc.robot.subsystems.Drive;
 import frc.robot.subsystems.Peripherals;
 
@@ -90,6 +91,10 @@ public class Robot extends TimedRobot {
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }
+
+    OI.driverA.whenPressed(new DriveForward(drive, 2, true));
+    OI.driverB.whenPressed(new DriveForward(drive, 2, false));
+
   }
 
   /** This function is called periodically during operator control. */
