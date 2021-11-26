@@ -1,14 +1,16 @@
 import pygame
 import Draw
 import Point
+import Convert
 pygame.init()
 
 
 screenWidth = 1000
 screenHeight = 500
 
-
+selectedValue = 0
 selectedPoint = None
+editorString = ''
 
 backgroundImg = pygame.image.load("Images/field2.png")
 newScreenWidth = ((screenHeight / int(backgroundImg.get_height())) * backgroundImg.get_width())
@@ -29,8 +31,29 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        
         if event.type == pygame.MOUSEBUTTONUP:
-            selectedPoint = Point.clicked(Draw.getFieldPos(pygame.mouse.get_pos(), fieldWidth, fieldHeight), fieldWidth, fieldHeight, pygame, selectedPoint)
+            selectedPoint = Point.clicked(Convert.getFieldPos(pygame.mouse.get_pos(), fieldWidth, fieldHeight), fieldWidth, fieldHeight, pygame, selectedPoint, newScreenWidth)
+            if selectedPoint != None:
+                selectedPoint = Draw.clickedInfo(pygame, selectedPoint, fieldWidth, fieldHeight)
+        
+        if event.type == pygame.KEYDOWN:
+            if selectedPoint != None:
+                if event.key in (pygame.K_0, pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9, pygame.K_PERIOD):
+                    editorString += event.unicode
+            if event.key == pygame.K_RETURN:
+                if selectedValue == 1:
+                    selectedPoint.angle = Convert.degreesToRadians(float(editorString))
+                if selectedValue == 2:
+                    selectedPoint.speed = float(editorString)
+                if selectedValue == 3:
+                    selectedPoint.time = float(editorString)
+                if selectedValue == 4:
+                    selectedPoint.x = float(editorString)
+                if selectedValue == 5:
+                    selectedPoint.y = float(editorString)
+                Point.saveSelectedPoint(selectedPoint, fieldWidth, fieldHeight)                 
+                editorString = ''
             
     ############
 
@@ -38,7 +61,7 @@ while running:
     Draw.drawPoints(pygame, screen, Point.getPoints())
     Draw.drawMouseCoords(pygame, screen, font, fieldWidth, fieldHeight)
     if selectedPoint != None:
-        Draw.drawPointInfo(pygame, screen, font, selectedPoint)
+        selectedValue = Draw.drawPointInfo(pygame, screen, font, selectedPoint)
 
     ############
     pygame.display.flip()
