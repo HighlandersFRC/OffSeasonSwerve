@@ -1,5 +1,6 @@
 package frc.robot.subsystems;
 
+import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 import com.ctre.phoenix.sensors.CANCoder;
 
@@ -11,6 +12,7 @@ import edu.wpi.first.wpilibj.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Constants;
 import frc.robot.OI;
 import frc.robot.commands.defaults.DriveDefault;
 import frc.robot.tools.math.Vector;
@@ -33,6 +35,8 @@ public class Drive extends SubsystemBase {
     private double adjustedX = 0.0;
     private double adjustedY = 0.0;
 
+    private final double moduleXY = ((Constants.ROBOT_WIDTH)/2) - Constants.MODULE_OFFSET;
+
     // creating all the external encoders
     private CANCoder backRightAbsoluteEncoder = new CANCoder(2);
     private CANCoder frontLeftAbsoluteEncoder = new CANCoder(1);
@@ -46,10 +50,10 @@ public class Drive extends SubsystemBase {
     private final SwerveModule rightBack = new SwerveModule(4, rightBackAngleMotor, rightBackMotor, 0, backRightAbsoluteEncoder);
 
     // Locations for the swerve drive modules relative to the robot center.
-    Translation2d m_frontLeftLocation = new Translation2d(0.2921, 0.2921);
-    Translation2d m_frontRightLocation = new Translation2d(0.2921, -0.2921);
-    Translation2d m_backLeftLocation = new Translation2d(-0.2921, 0.2921);
-    Translation2d m_backRightLocation = new Translation2d(-0.2921, -0.2921);
+    Translation2d m_frontLeftLocation = new Translation2d(moduleXY, moduleXY);
+    Translation2d m_frontRightLocation = new Translation2d(moduleXY, -moduleXY);
+    Translation2d m_backLeftLocation = new Translation2d(-moduleXY, moduleXY);
+    Translation2d m_backRightLocation = new Translation2d(-moduleXY, -moduleXY);
 
     // Creating my kinematics object using the module locations
     SwerveDriveKinematics m_kinematics = new SwerveDriveKinematics(
@@ -113,42 +117,63 @@ public class Drive extends SubsystemBase {
     }
 
     // method to actually run swerve code
-    public void swerveDrive() {
+    public void teleopDrive() {
+        double turnLimit = 0.75;
         double originalX = OI.getDriverLeftX();
         double originalY = -OI.getDriverLeftY();
-        double turn = OI.getDriverRightX();
+
+        if(Math.abs(originalX) < 0.05) {
+            originalX = 0;
+        }
+        if(Math.abs(originalY) < 0.05) {
+            originalY = 0;
+        }
+
+        double turn = OI.getDriverRightX() * turnLimit * (Constants.TOP_SPEED)/(Constants.ROBOT_RADIUS);
         double navxOffset = peripherals.getNavxAngle();
         double xPower = getAdjustedX(originalX, originalY);
         double yPower = getAdjustedY(originalX, originalY);
 
-        Vector controllerVector = new Vector(xPower, yPower);
+        double xSpeed = xPower * Constants.TOP_SPEED;
+        double ySpeed = yPower * Constants.TOP_SPEED;
 
-        m_pose = m_odometry.update(new Rotation2d(Math.toRadians(-navxOffset)), leftFront.getState(), rightFront.getState(), leftBack.getState(), rightBack.getState());
+        Vector controllerVector = new Vector(xSpeed, ySpeed);
 
-        leftFront.moduleDrive(controllerVector, turn, navxOffset);
-        rightFront.moduleDrive(controllerVector, turn, navxOffset);
-        leftBack.moduleDrive(controllerVector, turn, navxOffset);
-        rightBack.moduleDrive(controllerVector, turn, navxOffset);
+        m_pose = m_odometry.update(new Rotation2d(Math.toRadians(navxOffset)), leftFront.getState(Math.toRadians(navxOffset)), rightFront.getState(Math.toRadians(navxOffset)), leftBack.getState(Math.toRadians(navxOffset)), rightBack.getState(Math.toRadians(navxOffset)));
+
+        leftFront.velocityDrive(controllerVector, turn, navxOffset);
+        rightFront.velocityDrive(controllerVector, turn, navxOffset);
+        leftBack.velocityDrive(controllerVector, turn, navxOffset);
+        rightBack.velocityDrive(controllerVector, turn, navxOffset);
+
+        // leftForwardMotor.set(ControlMode.Velocity, 2500);
+        // rightForwardMotor.set(ControlMode.Velocity, 2500);
+        // leftBackMotor.set(ControlMode.Velocity, 2500);
+        // rightBackMotor.set(ControlMode.Velocity, 2500);
+
 
         rightFront.postDriveMotorTics();
 
         System.out.println(m_odometry.getPoseMeters());
+        // System.out.println("Rate: " + peripherals.getNavxRate());
     }
 
-    public void autoDrive(double angle, double turnDegPerSec, double driveSpeed) {
+    public void autoDrive(Vector velocityVector, double turnDegPerSec) {
         double navxOffset = peripherals.getNavxAngle();
 
-        double turn = turnDegPerSec/360;
-        double motorPercent = driveSpeed/4.96824;
+        double turnRadiansPerSec = Math.toRadians(turnDegPerSec);
+        // inputVector.scalarMultiple(motorPercent);
 
-        double radiansAngle = Math.toRadians(angle);
-        Vector inputVector = new Vector(Math.cos(radiansAngle), Math.sin(radiansAngle));
-        inputVector.scalarMultiple(motorPercent);
+        // double turnLimit = 1;
 
-        leftFront.moduleDrive(inputVector, turn, navxOffset);
-        rightFront.moduleDrive(inputVector, turn, navxOffset);
-        leftBack.moduleDrive(inputVector, turn, navxOffset);
-        rightBack.moduleDrive(inputVector, turn, navxOffset);
+        m_pose = m_odometry.update(new Rotation2d(Math.toRadians(navxOffset)), leftFront.getState(Math.toRadians(navxOffset)), rightFront.getState(Math.toRadians(navxOffset)), leftBack.getState(Math.toRadians(navxOffset)), rightBack.getState(Math.toRadians(navxOffset)));
+
+        System.out.println(m_odometry.getPoseMeters());
+
+        leftFront.velocityDrive(velocityVector, turnRadiansPerSec, navxOffset);
+        rightFront.velocityDrive(velocityVector, turnRadiansPerSec, navxOffset);
+        leftBack.velocityDrive(velocityVector, turnRadiansPerSec, navxOffset);
+        rightBack.velocityDrive(velocityVector, turnRadiansPerSec, navxOffset);
     }
 
     private Command DriveDefault() {

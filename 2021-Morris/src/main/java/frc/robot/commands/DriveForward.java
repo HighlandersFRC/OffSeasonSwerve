@@ -36,10 +36,10 @@ public class DriveForward extends CommandBase {
   @Override
   public void execute() {
     if(isForward) {
-    drive.autoDrive(90, 0, 1);
+      drive.autoDrive(new Vector(1, 1), -0);
     }
     else {
-      drive.autoDrive(270, 0, 1);
+      drive.autoDrive(new Vector(-1, -1), 0);
     }
   }
 

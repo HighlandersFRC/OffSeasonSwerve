@@ -39,6 +39,10 @@ public class Peripherals extends SubsystemBase {
     return navx.currentRoll();
   }
 
+  public double getNavxRate() {
+    return navx.getAngleRate();
+  }
+
   @Override
   public void periodic() {
     // This method will be called once per scheduler run

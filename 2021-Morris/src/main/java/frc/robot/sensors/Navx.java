@@ -80,5 +80,9 @@ public class Navx {
   public void softResetYaw() {
       originalYaw = imu.getYaw();
   }
+
+  public double getAngleRate() {
+      return (imu.getRate());
+  }
   
 }
