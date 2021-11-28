@@ -1,5 +1,4 @@
 import math
-from os import X_OK
 import Point
 import Convert
 
@@ -28,37 +27,50 @@ def drawMouseCoords(pygame, screen, font, fieldWidth, fieldHeight):
     mouseCoords = font.render("#Points: " + str(len(Point.getPoints())) + "  Pos: " + str( Convert.getFieldPos(pygame.mouse.get_pos(), fieldWidth, fieldHeight)), True, (255, 255, 255) )
     screen.blit(mouseCoords, (20, 20))
 
-def drawPointInfo(pygame, screen, font, point):
+def drawPointInfo(pygame, screen, font, point, fileName, jsonName):
     pointAngleColor = (255, 255, 255)
     pointSpeedColor = (255, 255, 255)
     pointTimeColor = (255, 255, 255)
     pointXColor = (255, 255, 255)
     pointYColor = (255, 255, 255)
+    pathNameColor = (255, 255, 255)
+    saveNameColor = (255, 255, 255)
 
     infoX = 890
+
+    x = pygame.mouse.get_pos()[0]
+    y = pygame.mouse.get_pos()[1]
 
     sel = 0
 
     #Info mouse-over detection
-    if pygame.mouse.get_pos()[0] >= infoX and pygame.mouse.get_pos()[1] >= 10 and pygame.mouse.get_pos()[1] <= 34:
+    if x >= infoX and x <= 1000 and y >= 10 and y <= 34:
         pointAngleColor = (0, 255, 0)
         sel = 1
     
-    if pygame.mouse.get_pos()[0] >= infoX and pygame.mouse.get_pos()[1] >= 110 and pygame.mouse.get_pos()[1] <= 134:
+    if x >= infoX and x <= 1000 and y >= 110 and y <= 134:
         pointSpeedColor = (0, 255, 0)
         sel = 2
 
-    if pygame.mouse.get_pos()[0] >= infoX and pygame.mouse.get_pos()[1] >= 150 and pygame.mouse.get_pos()[1] <= 174:
+    if x >= infoX and x <= 1000 and y >= 150 and y <= 174:
         pointTimeColor = (0, 255, 0)
         sel = 3
 
-    if pygame.mouse.get_pos()[0] >= infoX and pygame.mouse.get_pos()[1] >= 190 and pygame.mouse.get_pos()[1] <= 214:
+    if x >= infoX and x <= 1000 and y >= 190 and y <= 214:
         pointXColor = (0, 255, 0)
         sel = 4
 
-    if pygame.mouse.get_pos()[0] >= infoX and pygame.mouse.get_pos()[1] >= 270 and pygame.mouse.get_pos()[1] <= 294:
+    if x >= infoX and x <= 1000 and y >= 270 and y <= 294:
         pointYColor = (0, 255, 0)
         sel = 5
+
+    if x >= infoX and x <= 1000 and y >= 470 and y <= 494:
+        pathNameColor = (0, 255, 0)
+        sel = 6
+
+    if x >= 1015 and x <= 1115 and y >= 10 and y <= 34:
+        saveNameColor = (0, 255, 0)
+        sel = 7
 
     #Render text
     pointAngle = font.render("Angle: " + str( math.floor((Convert.radiansToDegrees(point.angle)) * 10) / 10 ), True, pointAngleColor)
@@ -66,6 +78,8 @@ def drawPointInfo(pygame, screen, font, point):
     pointTime = font.render("Time: " + str( math.floor((point.time) * 100) / 100 ), True, pointTimeColor)
     pointX = font.render("X: " + str( math.floor((point.x) * 100) / 100 ), True, pointXColor)
     pointY = font.render("Y: " + str( math.floor((point.y) * 100) / 100 ), True, pointYColor)
+    pathName = font.render(fileName, True, pathNameColor)
+    saveName = font.render(jsonName, True, saveNameColor)
 
     pointIndex = font.render("Index: " + str(point.index), True, (255, 255, 255))
 
@@ -76,6 +90,8 @@ def drawPointInfo(pygame, screen, font, point):
     screen.blit(pointX, (infoX, 190))
     screen.blit(pointY, (infoX, 270))
     screen.blit(pointIndex, (infoX, 350))
+    screen.blit(pathName, (infoX, 470))
+    screen.blit(saveName, (1015, 10))
 
     #Angle visual
     pygame.draw.circle(screen, (255, 255, 0), (945, 70), 35, 0)
@@ -100,15 +116,20 @@ def drawPointInfo(pygame, screen, font, point):
     pygame.draw.line(screen, (0, 0, 0), (920, 295), (920, 325))
 
     #Deletion box
-    pygame.draw.rect(screen, (255, 0, 0), (930, 400, 50, 50))
-
+    pygame.draw.rect(screen, (255, 0, 0), (950, 400, 50, 50))
     delete = font.render("DEL", True, (0, 0, 0))
+    screen.blit(delete, (955, 415))
 
-    screen.blit(delete, (935, 415))
+    #Save to file box
+    pygame.draw.rect(screen, (0, 255, 0), (900, 400, 50, 50))
+    save = font.render("SAV", True, (0, 0, 0))
+    screen.blit(save, (905, 415))
+
+    pygame.draw.line(screen, (0, 0, 0), (950, 400), (950, 450))
 
     return sel
 
-def clickedInfo(pygame, point, fieldWidth, fieldHeight):
+def clickedInfo(pygame, point, fieldWidth, fieldHeight, fileName):
     sens = 0.05
     x = pygame.mouse.get_pos()[0]
     y = pygame.mouse.get_pos()[1]
@@ -130,7 +151,10 @@ def clickedInfo(pygame, point, fieldWidth, fieldHeight):
 
     Point.saveSelectedPoint(point, fieldWidth, fieldHeight)
 
-    if x >= 930 and x <= 980 and y >= 400 and y <= 450:
+    if x >= 900 and x < 950 and y >= 400 and y <= 450:
+        Point.savePath(fileName)
+
+    if x >= 950 and x <= 1000 and y >= 400 and y <= 450:
         Point.deletePoint(point.index)
         return None
     else:
