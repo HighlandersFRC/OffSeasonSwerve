@@ -116,6 +116,18 @@ public class Drive extends SubsystemBase {
         setDefaultCommand(new DriveDefault(this));
     }
 
+    public double getOdometryX() {
+        return m_odometry.getPoseMeters().getX();
+    }
+
+    public double getOdometryY() {
+        return m_odometry.getPoseMeters().getY();
+    }
+
+    public double getOdometryAngle() {
+        return m_odometry.getPoseMeters().getRotation().getRadians();
+    }
+
     // method to actually run swerve code
     public void teleopDrive() {
         double turnLimit = 0.75;
