@@ -50,7 +50,6 @@ def getPoints():
     return points
 
 def setPoints(newPoints):
-    print(str(points))
     points.clear()
     for point in newPoints:
         points.append(point)

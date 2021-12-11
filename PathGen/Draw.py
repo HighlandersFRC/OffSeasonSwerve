@@ -1,6 +1,7 @@
 import math
 import Point
 import Convert
+import File
 
 def drawField(field, screen, pygame, screenWidth, screenHeight):
     pygame.draw.rect(screen, (0, 0, 0), (0, 0, screenWidth, screenHeight))
@@ -100,6 +101,21 @@ def drawPointInfo(pygame, screen, font, point, fileName, jsonName):
 
     pygame.draw.line(screen, (0, 255, 0), (945, 70), (35 * math.cos(point.angle) + 945, 35 * math.sin(point.angle) + 70), 2)
 
+    #Upload button
+    pygame.draw.rect(screen, (255, 255, 255), (1050, 100, 100, 50))
+
+    upload = font.render("UPLOAD", True, (0, 0, 0))
+
+    screen.blit(upload, (1057, 115))
+
+    #Upload all button
+    pygame.draw.rect(screen, (255, 255, 255), (1050, 200, 100, 50))
+
+    all = font.render("ALL", True, (0, 0, 0))
+
+    screen.blit(upload, (1057, 202))
+    screen.blit(all, (1080, 228))
+
     #X and Y tuning boxes
     pygame.draw.rect(screen, (255, 255, 255), (890, 215, 60, 30))
     pygame.draw.rect(screen, (255, 255, 255), (890, 295, 60, 30))
@@ -144,6 +160,7 @@ def clickedInfo(pygame, point, fieldWidth, fieldHeight, fileName):
     if x >= 920 and x <= 950 and y >= 295 and y <= 325:
         point.y += sens
 
+    #Angle selection
     if Convert.getPixelDist(x, y, 945, 70) <= 35:
         point.angle = (math.pi / 2) - math.atan2(x - 945, y - 70)
         while point.angle < 0:
@@ -151,6 +168,17 @@ def clickedInfo(pygame, point, fieldWidth, fieldHeight, fileName):
 
     Point.saveSelectedPoint(point, fieldWidth, fieldHeight)
 
+    #Upload path
+    if x >= 1050 and x <= 1150 and y >= 100 and y <= 150:
+        Point.savePath(fileName)
+        File.uploadFile('json-paths/' + fileName + '.json')
+
+    #Upload all paths
+    if x >= 1050 and x <= 1150 and y >= 200 and y <= 250:
+        Point.savePath(fileName)
+        File.uploadAll()
+
+    #Save and delete buttons
     if x >= 900 and x < 950 and y >= 400 and y <= 450:
         Point.savePath(fileName)
 

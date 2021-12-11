@@ -3,6 +3,29 @@ import Convert
 import Point
 import glob
 import json
+from paramiko import SSHClient
+import paramiko
+from scp import SCPClient
+
+
+ssh = SSHClient()
+ssh.load_system_host_keys()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect('172.22.11.2', username='lvuser', password='')
+scp = SCPClient(ssh.get_transport())
+
+def uploadFile(localFilePath):
+    scp.put(localFilePath, remote_path='/home/lvuser/deploy')
+    #scp.get('ExamplePath.json')
+
+    #scp.put('test', recursive=True, remote_path='/home/user/dump')
+
+    scp.close()
+
+def uploadAll():
+    saves = glob.glob("json-paths/*.json*")
+    for save in saves:
+        scp.put(save, remote_path='/home/lvuser/deploy')
 
 def getSave(fileName, fieldWidth, fieldHeight):
     saves = glob.glob("json-paths/*.json*")

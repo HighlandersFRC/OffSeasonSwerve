@@ -49,7 +49,8 @@ while running:
                     editorString += event.unicode
                 editorString2 += event.unicode
                 if selectedValue == 1:
-                    selectedPoint.angle = Convert.degreesToRadians(float(editorString))
+                    if editorString != '':
+                        selectedPoint.angle = Convert.degreesToRadians(float(editorString))
                 if selectedValue == 2:
                     selectedPoint.speed = float(editorString)
                 if selectedValue == 3:
@@ -63,6 +64,7 @@ while running:
                 if selectedValue == 7:
                     saveName = editorString2.rstrip("\r")
             if event.key == pygame.K_RETURN:
+                selectedPoint.angle = selectedPoint.angle % 360
                 if selectedValue == 7:
                     fileName = File.getSave(saveName, fieldWidth, fieldHeight)
                     selectedPoint = None
